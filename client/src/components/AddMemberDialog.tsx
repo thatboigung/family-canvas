@@ -2,13 +2,12 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { InsertFamilyMember, insertFamilyMemberSchema, FamilyMember } from "@/types/schema";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   Form,
   FormControl,
@@ -337,24 +336,17 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="glass-panel border border-white/10 max-w-2xl max-h-[90vh] flex flex-col p-0 gap-0">
-        <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="text-2xl font-display">
-            {isEditMode ? 'Edit Member Details' : (existingMembers.length === 0 ? 'Start Your Family Tree' : 'Add Family Member')}
-          </DialogTitle>
-          <DialogDescription>
-            {isEditMode 
-              ? 'Update the member\'s information'
-              : (existingMembers.length === 0 
-                ? 'Begin by adding yourself to the family tree'
-                : 'Add a family member and specify their relationship')}
-          </DialogDescription>
-        </DialogHeader>
-
-        <ScrollArea className="flex-1 p-6 pt-2">
+    <Sheet open={isOpen} onOpenChange={onClose}>
+      <SheetContent side="right" className="glass-panel border-l border-white/10 w-full sm:max-w-md p-0 overflow-hidden">
+        <SheetHeader className="pt-6 px-6">
+          <SheetTitle>{isEditMode ? "Edit Member" : "Add Member"}</SheetTitle>
+          <SheetDescription>
+            {isEditMode ? "Update family member details." : "Add a new member to your family tree."}
+          </SheetDescription>
+        </SheetHeader>
+        <ScrollArea className="h-full px-6 pb-6 relative z-10">
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {!isEditMode && existingMembers.length > 0 && (
                 <div className="space-y-4 pb-4 border-b border-white/10">
                   <h4 className="font-semibold text-sm uppercase tracking-wider text-muted-foreground flex items-center gap-2">
@@ -714,29 +706,27 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                 )}
               />
 
-              <DialogFooter className="pt-4 border-t border-white/10">
-                <div className="flex gap-2 w-full justify-between">
+              <div className="pt-4 border-t border-white/10 pb-60">
+                <div className="flex flex-col gap-2 w-full">
                   <Button 
                     variant="outline" 
                     onClick={() => form.reset()} 
                     type="button"
-                    className="border-white/10 hover:bg-white/5"
+                    className="border-white/10 hover:bg-white/5 w-full"
                   >
                     Reset
                   </Button>
-                  <div className="flex gap-2">
-                    <Button variant="ghost" onClick={onClose} type="button">Cancel</Button>
-                    <Button type="submit" className="bg-primary hover:bg-primary/90 text-white" disabled={isSubmitting}>
-                      {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                      {existingMembers.length === 0 ? 'Start Tree' : 'Add Member'}
-                    </Button>
-                  </div>
+                  <Button variant="ghost" onClick={onClose} type="button" className="w-full">Cancel</Button>
+                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white w-full" disabled={isSubmitting}>
+                    {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    {existingMembers.length === 0 ? 'Start Tree' : isEditMode ? 'Save Changes' : 'Add Member'}
+                  </Button>
                 </div>
-              </DialogFooter>
+              </div>
             </form>
           </Form>
         </ScrollArea>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }

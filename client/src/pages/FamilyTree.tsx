@@ -19,6 +19,7 @@ import { useFamilyTree } from '@/hooks/use-family-tree';
 import { MemberDetailSheet } from '@/components/MemberDetailSheet';
 import { AddMemberDialog } from '@/components/AddMemberDialog';
 import { Button } from '@/components/ui/button';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '@/components/ui/alert-dialog';
 import { Input } from '@/components/ui/input';
 import { Plus, Search, ZoomIn, ZoomOut, Layout, RotateCcw, MousePointer2, Hand } from 'lucide-react';
 import { FamilyMember } from '@/types/schema';
@@ -28,6 +29,8 @@ const nodeTypes = {
 };
 
 function FamilyTreeFlow() {
+      const [showResetDialog, setShowResetDialog] = useState(false);
+    const [toolsMenuOpen, setToolsMenuOpen] = useState(false);
   const [selectedMember, setSelectedMember] = useState<FamilyMember | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [preselectedPersonId, setPreselectedPersonId] = useState<string | undefined>(undefined);
@@ -145,15 +148,28 @@ function FamilyTreeFlow() {
   return (
     <div className="w-full h-screen bg-[#09090b] relative overflow-hidden font-sans">
       {/* Header Overlay */}
-      <div className="absolute top-0 left-0 w-full z-10 p-6 pointer-events-none flex justify-between items-start">
-        <div className="pointer-events-auto">
-          <h1 className="text-4xl font-display font-bold text-white tracking-tighter mb-1">
-            GAV3NA <span className="text-primary font-light">Heritage</span>
+      <div className="absolute top-0 left-0 w-full z-10 p-6 pointer-events-none flex flex-col items-center sm:flex-row sm:justify-between sm:items-start">
+        <div className="pointer-events-auto w-full sm:w-auto text-center sm:text-left">
+          <h1 className="text-lg sm:text-2xl font-bold text-white mb-2 font-display tracking-tight">
+            Gavena <span className="text-purple-500">Heritage</span>
           </h1>
-          <p className="text-white/40 text-sm font-mono tracking-widest uppercase">Family Tree Visualization V1.0</p>
         </div>
-
-        <div className="flex gap-4 pointer-events-auto">
+        {/* Search button under app name for mobile */}
+        <div className="w-full flex flex-col items-center sm:hidden mt-2">
+          <div className="relative group w-full max-w-xs">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <Search className="h-4 w-4 text-white/30 group-focus-within:text-primary transition-colors" />
+            </div>
+            <Input 
+              className="pl-10 w-full glass border-white/10 text-white placeholder:text-white/30 focus:border-primary/50 focus:ring-0 transition-all rounded-full" 
+              placeholder="Search lineage..." 
+              value={searchQuery}
+              onChange={(e) => handleSearch(e.target.value)}
+            />
+          </div>
+        </div>
+        {/* Desktop search and add member button */}
+        <div className="hidden sm:flex gap-4 pointer-events-auto">
           <div className="relative group">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
               <Search className="h-4 w-4 text-white/30 group-focus-within:text-primary transition-colors" />
@@ -174,44 +190,77 @@ function FamilyTreeFlow() {
         </div>
       </div>
 
-      {/* Floating Controls Overlay - Bottom Left */}
+      {/* Floating Controls Overlay - Bottom Left as Tools Menu */}
       <div className="absolute bottom-8 left-8 z-10 flex gap-2 pointer-events-auto">
-         <div className="glass p-1.5 rounded-xl flex flex-col gap-1 shadow-2xl border border-white/5">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setIsSelectionMode(!isSelectionMode)} 
-              className={`h-10 w-10 rounded-lg transition-all ${
-                isSelectionMode 
-                  ? 'bg-primary/20 text-primary hover:bg-primary/30' 
-                  : 'text-white/70 hover:text-white hover:bg-white/10'
-              }`}
-              title={isSelectionMode ? 'Switch to Pan Mode' : 'Switch to Selection Mode'}
-            >
+        <div className="glass p-1.5 rounded-xl flex flex-col gap-1 shadow-2xl border border-white/5">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setToolsMenuOpen((open) => !open)}
+            className="h-10 w-10 rounded-lg transition-all text-white/70 hover:text-white hover:bg-white/10"
+            title="Show Tools Menu"
+          >
+            <Layout className="h-5 w-5" />
+          </Button>
+          {toolsMenuOpen && (
+            <div className="flex flex-col gap-1 mt-2">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsSelectionMode(!isSelectionMode)}
+                className={`h-10 w-10 rounded-lg transition-all ${
+                  isSelectionMode
+                    ? 'bg-primary/20 text-primary hover:bg-primary/30'
+                    : 'text-white/70 hover:text-white hover:bg-white/10'
+                }`}
+                title={isSelectionMode ? 'Switch to Pan Mode' : 'Switch to Selection Mode'}
+              >
                 {isSelectionMode ? <MousePointer2 className="h-5 w-5" /> : <Hand className="h-5 w-5" />}
-            </Button>
-            <div className="h-px bg-white/10 my-1"></div>
-            <Button variant="ghost" size="icon" onClick={() => zoomIn?.()} className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => zoomIn?.()} className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
                 <ZoomIn className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => zoomOut?.()} className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => zoomOut?.()} className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
                 <ZoomOut className="h-5 w-5" />
-            </Button>
-            <Button variant="ghost" size="icon" onClick={() => fitView?.({ duration: 800 })} className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
+              </Button>
+              <Button variant="ghost" size="icon" onClick={() => fitView?.({ duration: 800 })} className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg">
                 <Layout className="h-5 w-5" />
-            </Button>
-            <div className="h-px bg-white/10 my-1"></div>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => window.location.reload()} 
-              className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg"
-              title="Reset Tree"
-            >
-                <RotateCcw className="h-5 w-5" />
-            </Button>
-         </div>
+              </Button>
+            </div>
+          )}
+        </div>
       </div>
+        {/* Reset Button - Top Right Corner with warning dialog */}
+        <div className="absolute top-6 right-6 z-20">
+          <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
+            <AlertDialogTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-10 w-10 text-white/70 hover:text-white hover:bg-white/10 rounded-lg"
+                title="Reset Tree"
+              >
+                <RotateCcw className="h-5 w-5" />
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Reset Family Tree?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will reload the page and any unsaved changes will be lost. Are you sure you want to continue?
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction asChild>
+                  <Button variant="destructive" onClick={() => window.location.reload()}>
+                    Yes, Reset
+                  </Button>
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </div>
 
       {/* Onboarding Hint */}
       {members.length === 1 && (
@@ -249,7 +298,7 @@ function FamilyTreeFlow() {
               </ul>
               <Button 
                 onClick={() => setIsAddDialogOpen(true)}
-                className="w-full bg-primary hover:bg-primary/90 text-white font-semibold mt-4"
+                className="w-full bg-primary hover:bg-primary/90 text-white font-semibold mt-4 sm:block hidden"
               >
                 <Plus className="w-4 h-4 mr-2" /> Add First Family Member
               </Button>

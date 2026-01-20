@@ -29,7 +29,20 @@ export function MemberDetailSheet({ member, isOpen, onClose, onEdit, getMemberNa
       <SheetContent className="glass-panel border-l border-white/10 w-full sm:max-w-md p-0 overflow-hidden">
         {/* Cover Image Effect */}
         <div className="h-32 bg-gradient-to-r from-indigo-500/20 via-purple-500/20 to-pink-500/20 w-full absolute top-0 left-0 z-0" />
-        
+
+        {/* Close Button (X) */}
+        <Button
+          onClick={onClose}
+          size="icon"
+          className="absolute top-4 left-4 z-20 glass-panel border border-white/10 hover:border-primary/50 transition-all"
+          title="Close"
+        >
+          <span className="sr-only">Close</span>
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" className="w-5 h-5">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </Button>
+
         {/* Edit Button */}
         {onEdit && (
           <Button
@@ -44,7 +57,7 @@ export function MemberDetailSheet({ member, isOpen, onClose, onEdit, getMemberNa
             Edit Details
           </Button>
         )}
-        
+
         <ScrollArea className="h-full pt-20 px-6 pb-6 relative z-10">
           <div className="flex flex-col items-center text-center space-y-4 mb-8">
             <Avatar className="w-32 h-32 border-4 border-zinc-900 shadow-2xl">
