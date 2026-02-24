@@ -6,12 +6,14 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
 import FamilyTreePage from "@/pages/FamilyTree";
 import LandingPage from "@/pages/Landing";
+import SettingsPage from "@/pages/Settings";
 
 function Router() {
   return (
     <Switch>
       <Route path="/" component={LandingPage} />
       <Route path="/tree" component={FamilyTreePage} />
+      <Route path="/settings" component={SettingsPage} />
       <Route component={NotFound} />
     </Switch>
   );

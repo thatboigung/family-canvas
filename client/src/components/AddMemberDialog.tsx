@@ -58,8 +58,10 @@ interface AddMemberDialogProps {
 
 export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMembers, preselectedPersonId, editingMember, familySurname }: AddMemberDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [birthYearOpen, setBirthYearOpen] = useState(false);
+  const [deathYearOpen, setDeathYearOpen] = useState(false);
   const isEditMode = !!editingMember;
-  
+
   const form = useForm<AddMemberFormData>({
     resolver: zodResolver(addMemberFormSchema),
     defaultValues: {
@@ -75,7 +77,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
     },
   });
 
-  // Update form when preselectedPersonId or editingMember changes
+  // Update form when preselectedPersonId, editingMember or tree reset happens
   useEffect(() => {
     if (isOpen) {
       if (editingMember) {
@@ -90,11 +92,24 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
           relationshipType: 'none',
           relatedToId: undefined,
         });
+      } else if (existingMembers.length === 0) {
+        // Handle fresh tree/reset state
+        form.reset({
+          firstName: "You",
+          surname: "",
+          birthYear: "",
+          deathYear: "",
+          gender: "male",
+          bio: "",
+          photoUrl: "",
+          relationshipType: 'none',
+          relatedToId: undefined,
+        });
       } else if (preselectedPersonId) {
         form.setValue('relatedToId', preselectedPersonId);
       }
     }
-  }, [preselectedPersonId, editingMember, isOpen, form, familySurname]);
+  }, [preselectedPersonId, editingMember, isOpen, form, existingMembers.length]);
 
   const relationshipType = form.watch('relationshipType');
   const relatedToId = form.watch('relatedToId');
@@ -134,13 +149,13 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
   const onSubmit = async (data: AddMemberFormData) => {
     setIsSubmitting(true);
     await new Promise(resolve => setTimeout(resolve, 800));
-    
+
     // === UNIVERSAL VALIDATIONS (for both add and edit) ===
     // Validate birth year is not in the future
     if (data.birthYear) {
       const birthYear = parseInt(data.birthYear);
       const currentYear = new Date().getFullYear();
-      
+
       if (birthYear > currentYear) {
         form.setError('birthYear', {
           type: 'manual',
@@ -150,7 +165,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
         return;
       }
     }
-    
+
     // === VALIDATION FOR ADDING NEW MEMBERS ===
     if (!isEditMode) {
       // Validate age difference for parent-child relationships
@@ -159,7 +174,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
         if (relatedPerson && relatedPerson.birthYear && data.birthYear) {
           const relatedBirthYear = parseInt(relatedPerson.birthYear);
           const newBirthYear = parseInt(data.birthYear);
-          
+
           if (data.relationshipType === 'parent') {
             // Parent should be at least 10 years older than child
             const ageDifference = relatedBirthYear - newBirthYear;
@@ -185,7 +200,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
           }
         }
       }
-      
+
       // Validate age difference for spouse relationships (they become parents of children)
       if (data.relationshipType === 'spouse') {
         const relatedPerson = existingMembers.find(m => m.id === data.relatedToId);
@@ -193,7 +208,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
           const newBirthYear = parseInt(data.birthYear);
           const currentYear = new Date().getFullYear();
           const minBirthYear = currentYear - 12;
-          
+
           // Spouse must be at least 12 years old
           if (newBirthYear > minBirthYear) {
             form.setError('birthYear', {
@@ -203,7 +218,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
             setIsSubmitting(false);
             return;
           }
-          
+
           // Check if related person has children (spouse will become parent)
           if (relatedPerson.children && relatedPerson.children.length > 0) {
             for (const childId of relatedPerson.children) {
@@ -211,7 +226,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
               if (child && child.birthYear) {
                 const childBirthYear = parseInt(child.birthYear);
                 const ageDifference = childBirthYear - newBirthYear;
-                
+
                 if (ageDifference < 10) {
                   form.setError('birthYear', {
                     type: 'manual',
@@ -226,19 +241,19 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
         }
       }
     }
-    
+
     // === VALIDATION FOR EDITING EXISTING MEMBERS ===
     if (isEditMode && editingMember) {
       // Validate age with children (if member has children)
       if (editingMember.children && editingMember.children.length > 0 && data.birthYear) {
         const newBirthYear = parseInt(data.birthYear);
-        
+
         for (const childId of editingMember.children) {
           const child = existingMembers.find(m => m.id === childId);
           if (child && child.birthYear) {
             const childBirthYear = parseInt(child.birthYear);
             const ageDifference = childBirthYear - newBirthYear;
-            
+
             if (ageDifference < 10) {
               form.setError('birthYear', {
                 type: 'manual',
@@ -250,17 +265,17 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
           }
         }
       }
-      
+
       // Validate age with parents (if member has parents)
       if (editingMember.parents && editingMember.parents.length > 0 && data.birthYear) {
         const newBirthYear = parseInt(data.birthYear);
-        
+
         for (const parentId of editingMember.parents) {
           const parent = existingMembers.find(m => m.id === parentId);
           if (parent && parent.birthYear) {
             const parentBirthYear = parseInt(parent.birthYear);
             const ageDifference = newBirthYear - parentBirthYear;
-            
+
             if (ageDifference < 10) {
               form.setError('birthYear', {
                 type: 'manual',
@@ -272,24 +287,24 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
           }
         }
       }
-      
+
       // Validate age with spouse (if member has spouse)
       if (editingMember.spouseId && data.birthYear) {
         const spouse = existingMembers.find(m => m.id === editingMember.spouseId);
         if (spouse && spouse.birthYear) {
           const spouseBirthYear = parseInt(spouse.birthYear);
           const newBirthYear = parseInt(data.birthYear);
-          
+
           // If this member or their spouse has children, validate both are old enough to be parents
           const childrenIds = [...(editingMember.children || []), ...(spouse.children || [])];
           const uniqueChildrenIds = Array.from(new Set(childrenIds));
-          
+
           for (const childId of uniqueChildrenIds) {
             const child = existingMembers.find(m => m.id === childId);
             if (child && child.birthYear) {
               const childBirthYear = parseInt(child.birthYear);
               const ageDifference = childBirthYear - newBirthYear;
-              
+
               if (ageDifference < 10) {
                 form.setError('birthYear', {
                   type: 'manual',
@@ -303,23 +318,23 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
         }
       }
     }
-    
+
     // Combine firstName and surname into name
     const fullName = `${data.firstName} ${data.surname}`.trim();
     const memberData = { ...data, name: fullName };
-    
+
     if (isEditMode && editingMember && onEdit) {
       // Edit mode - only update basic fields, not relationships
       const { relationshipType, relatedToId, ...editData } = memberData;
       onEdit(editingMember.id, editData);
     } else {
       // Add mode - for the first member, ensure firstName is "You"
-      const finalData = existingMembers.length === 0 
+      const finalData = existingMembers.length === 0
         ? { ...memberData, firstName: "You", name: `You ${data.surname}` }
         : memberData;
       onAdd(finalData);
     }
-    
+
     setIsSubmitting(false);
     form.reset({
       firstName: "",
@@ -337,7 +352,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
 
   return (
     <Sheet open={isOpen} onOpenChange={onClose}>
-      <SheetContent side="right" className="glass-panel border-l border-white/10 w-full sm:max-w-md p-0 overflow-hidden">
+      <SheetContent side="right" className="glass-panel border-l border-white/10 w-full sm:max-w-md p-0 overflow-hidden focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:ring-offset-0 focus-visible:outline-none">
         <SheetHeader className="pt-6 px-6">
           <SheetTitle>{isEditMode ? "Edit Member" : "Add Member"}</SheetTitle>
           <SheetDescription>
@@ -353,7 +368,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                     <Users className="w-4 h-4" />
                     Relationship
                   </h4>
-                  
+
                   <FormField
                     control={form.control}
                     name="relationshipType"
@@ -362,7 +377,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                         <FormLabel>This person is a...</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger className="bg-zinc-900/50 border-white/10">
+                            <SelectTrigger className="bg-white/5 border-transparent focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none focus:border-transparent">
                               <SelectValue placeholder="Select relationship" />
                             </SelectTrigger>
                           </FormControl>
@@ -400,7 +415,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                         </FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger className="bg-zinc-900/50 border-white/10">
+                            <SelectTrigger className="bg-white/5 border-transparent focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none focus:border-transparent">
                               <SelectValue placeholder="Select a person..." />
                             </SelectTrigger>
                           </FormControl>
@@ -433,7 +448,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                     <FormItem>
                       <FormLabel>First Name{existingMembers.length === 0 && ' *'}</FormLabel>
                       <FormControl>
-                        <Input placeholder="John" className="bg-zinc-900/50 border-white/10 focus:border-primary/50" {...field} />
+                        <Input placeholder="John" className="bg-white/5 border-transparent focus:border-transparent focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -449,9 +464,9 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                         Surname (Family Name){existingMembers.length === 0 && ' *'}
                       </FormLabel>
                       <FormControl>
-                        <Input 
-                          placeholder="Doe" 
-                          className="bg-zinc-900/50 border-white/10 focus:border-primary/50" 
+                        <Input
+                          placeholder="Doe"
+                          className="bg-white/5 border-transparent focus:border-transparent focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none"
                           {...field}
                           disabled={!isEditMode && relationshipType !== 'spouse' && relationshipType !== 'none' && existingMembers.length > 0}
                         />
@@ -487,13 +502,13 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Gender</FormLabel>
-                      <Select 
-                        onValueChange={field.onChange} 
+                      <Select
+                        onValueChange={field.onChange}
                         value={field.value}
                         disabled={relationshipType === 'parent' || relationshipType === 'spouse'}
                       >
                         <FormControl>
-                          <SelectTrigger className="bg-zinc-900/50 border-white/10">
+                          <SelectTrigger className="bg-white/5 border-transparent focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none focus:border-transparent">
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                         </FormControl>
@@ -524,12 +539,12 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                   render={({ field }) => {
                     // Calculate year range based on relationship type
                     let yearOptions: number[] = [];
-                    
+
                     if (relationshipType === 'child' && relatedMember && relatedMember.birthYear) {
                       // For children, years start from parent's birth year + 10 (minimum age difference)
                       const parentBirthYear = parseInt(relatedMember.birthYear);
                       const startYear = parentBirthYear + 10; // Parent must be at least 10 years older
-                      
+
                       // End year is either parent's death year OR parent's birth year + 80
                       let endYear: number;
                       if (relatedMember.deathYear) {
@@ -537,7 +552,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                       } else {
                         endYear = parentBirthYear + 80;
                       }
-                      
+
                       // Generate years from start to end
                       const yearCount = endYear - startYear + 1;
                       yearOptions = Array.from({ length: yearCount }, (_, i) => startYear + i);
@@ -550,17 +565,17 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                       // Default: show 150 years back from current year
                       yearOptions = Array.from({ length: 150 }, (_, i) => new Date().getFullYear() - i);
                     }
-                    
+
                     return (
                       <FormItem className="flex flex-col">
                         <FormLabel>Birth Year</FormLabel>
-                        <Popover>
+                        <Popover open={birthYearOpen} onOpenChange={setBirthYearOpen}>
                           <PopoverTrigger asChild>
                             <FormControl>
                               <Button
                                 variant="outline"
                                 role="combobox"
-                                className="bg-zinc-900/50 border-white/10 justify-between hover:bg-zinc-900/70"
+                                className="bg-white/5 border-0 justify-between hover:bg-white/10 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none outline-none"
                               >
                                 {field.value || "Select year"}
                                 <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -579,12 +594,12 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                                       value={year.toString()}
                                       onSelect={() => {
                                         field.onChange(year.toString());
+                                        setBirthYearOpen(false);
                                       }}
                                     >
                                       <Check
-                                        className={`mr-2 h-4 w-4 ${
-                                          field.value === year.toString() ? "opacity-100" : "opacity-0"
-                                        }`}
+                                        className={`mr-2 h-4 w-4 ${field.value === year.toString() ? "opacity-100" : "opacity-0"
+                                          }`}
                                       />
                                       {year}
                                     </CommandItem>
@@ -607,7 +622,7 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                     render={({ field }) => {
                       // Calculate death year options starting from birth year
                       let deathYearOptions: number[] = [];
-                      
+
                       if (relationshipType === 'parent' && relatedMember && relatedMember.birthYear) {
                         // For fathers, death year must be at least from child's birth year
                         const childBirthYear = parseInt(relatedMember.birthYear);
@@ -623,17 +638,17 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                         // If no birth year selected, show default 150 years
                         deathYearOptions = Array.from({ length: 150 }, (_, i) => new Date().getFullYear() - i);
                       }
-                      
+
                       return (
                         <FormItem className="flex flex-col">
                           <FormLabel>Death Year (Optional)</FormLabel>
-                          <Popover>
+                          <Popover open={deathYearOpen} onOpenChange={setDeathYearOpen}>
                             <PopoverTrigger asChild>
                               <FormControl>
                                 <Button
                                   variant="outline"
                                   role="combobox"
-                                  className="bg-zinc-900/50 border-white/10 justify-between hover:bg-zinc-900/70"
+                                  className="bg-white/5 border-0 justify-between hover:bg-white/10 focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none outline-none"
                                 >
                                   {field.value || "Still alive"}
                                   <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
@@ -650,12 +665,12 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                                       value=""
                                       onSelect={() => {
                                         field.onChange("");
+                                        setDeathYearOpen(false);
                                       }}
                                     >
                                       <Check
-                                        className={`mr-2 h-4 w-4 ${
-                                          !field.value ? "opacity-100" : "opacity-0"
-                                        }`}
+                                        className={`mr-2 h-4 w-4 ${!field.value ? "opacity-100" : "opacity-0"
+                                          }`}
                                       />
                                       Still alive
                                     </CommandItem>
@@ -665,12 +680,12 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                                         value={year.toString()}
                                         onSelect={() => {
                                           field.onChange(year.toString());
+                                          setDeathYearOpen(false);
                                         }}
                                       >
                                         <Check
-                                          className={`mr-2 h-4 w-4 ${
-                                            field.value === year.toString() ? "opacity-100" : "opacity-0"
-                                          }`}
+                                          className={`mr-2 h-4 w-4 ${field.value === year.toString() ? "opacity-100" : "opacity-0"
+                                            }`}
                                         />
                                         {year}
                                       </CommandItem>
@@ -695,10 +710,10 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
                   <FormItem>
                     <FormLabel>Biography</FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="Tell their story..." 
-                        className="bg-zinc-900/50 border-white/10 min-h-[100px]" 
-                        {...field} 
+                      <Textarea
+                        placeholder="Tell their story..."
+                        className="bg-white/5 border-transparent min-h-[100px] focus:ring-0 focus:ring-offset-0 focus-visible:ring-0 focus-visible:outline-none focus:border-transparent"
+                        {...field}
                       />
                     </FormControl>
                     <FormMessage />
@@ -708,16 +723,16 @@ export function AddMemberDialog({ isOpen, onClose, onAdd, onEdit, existingMember
 
               <div className="pt-4 border-t border-white/10 pb-60">
                 <div className="flex flex-col gap-2 w-full">
-                  <Button 
-                    variant="outline" 
-                    onClick={() => form.reset()} 
+                  <Button
+                    variant="outline"
+                    onClick={() => form.reset()}
                     type="button"
-                    className="border-white/10 hover:bg-white/5 w-full"
+                    className="bg-white/5 border-0 hover:bg-white/10 w-full focus-visible:ring-0 focus-visible:outline-none"
                   >
                     Reset
                   </Button>
-                  <Button variant="ghost" onClick={onClose} type="button" className="w-full">Cancel</Button>
-                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white w-full" disabled={isSubmitting}>
+                  <Button variant="ghost" onClick={onClose} type="button" className="w-full focus-visible:ring-0 focus-visible:outline-none">Cancel</Button>
+                  <Button type="submit" className="bg-primary hover:bg-primary/90 text-white w-full border-0 focus-visible:ring-0 focus-visible:outline-none" disabled={isSubmitting}>
                     {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {existingMembers.length === 0 ? 'Start Tree' : isEditMode ? 'Save Changes' : 'Add Member'}
                   </Button>

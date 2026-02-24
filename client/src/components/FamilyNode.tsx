@@ -1,4 +1,5 @@
 import { memo } from 'react';
+import './ui/grouped-node.css';
 import { Handle, Position, NodeProps } from '@xyflow/react';
 import { FamilyMember } from '@/types/schema';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -20,7 +21,8 @@ export const FamilyNode = memo(({ data, selected }: NodeProps<FamilyNodeData>) =
   return (
     <div className={cn(
       "glass p-2 sm:p-4 rounded-2xl min-w-[180px] sm:min-w-[280px] transition-all duration-300 group relative",
-      selected ? "ring-2 ring-primary border-primary/50 shadow-[0_0_30px_rgba(124,58,237,0.3)]" : "hover:border-white/20 hover:bg-white/10"
+      selected ? "ring-2 ring-primary border-primary/50 shadow-[0_0_30px_rgba(124,58,237,0.3)]" : "hover:border-white/20 hover:bg-white/10",
+      data.grouped && 'grouped-node'
     )}>
       <Handle type="target" position={Position.Top} className="!bg-primary !w-3 !h-3 !-top-1.5" />
       {/* Add Member Button: show if selected or hovered */}
